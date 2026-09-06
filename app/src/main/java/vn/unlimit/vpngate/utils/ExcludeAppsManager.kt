@@ -2,12 +2,10 @@ package vn.unlimit.vpngate.utils
 
 import android.content.Context
 import android.widget.Toast
-import androidx.fragment.app.FragmentManager
 import de.blinkt.openvpn.VpnProfile
 import kotlinx.coroutines.*
 import vn.unlimit.vpngate.App
 import vn.unlimit.vpngate.R
-import vn.unlimit.vpngate.dialog.AppSelectionDialog
 import vn.unlimit.vpngate.models.ExcludedApp
 
 class ExcludeAppsManager(private val context: Context) {
@@ -26,36 +24,16 @@ class ExcludeAppsManager(private val context: Context) {
         this.callback = callback
     }
 
-    fun openExcludeAppsManager(fragmentManager: FragmentManager) {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                // Get currently excluded apps on background thread
-                val excludedApps = App.instance?.excludedAppDao?.getAllExcludedApps() ?: emptyList()
-                // Filter out self — hidden from user, always force-added on save
-                val userExcludedApps = excludedApps.filter { it.packageName != selfPackageName }
-
-                // Create dialog on main thread
-                withContext(Dispatchers.Main) {
-                    val dialog = AppSelectionDialog()
-                    dialog.setExcludedApps(userExcludedApps)
-                    dialog.setAppSelectionListener(object : AppSelectionDialog.AppSelectionListener {
-                        override fun onAppsSelected(apps: List<ExcludedApp>) {
-                            // Save selected apps to database
-                            saveSelectedApps(apps)
-                        }
-                    })
-                    dialog.show(fragmentManager, "AppSelectionDialog")
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, context.getString(R.string.error_opening_app_selection), Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
+    /**
+     * The Compose ExcludedAppsSheet performs the database write itself and
+     * then calls this to run the shared post-save behavior.
+     */
+    fun notifyAppsSaved(selectedApps: List<ExcludedApp>) {
+        callback?.updateButtonText(selectedApps.count { it.packageName != selfPackageName })
+        callback?.restartVpnIfRunning()
     }
 
-    private fun saveSelectedApps(selectedApps: List<ExcludedApp>) {
+    fun saveSelectedApps(selectedApps: List<ExcludedApp>) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 App.instance?.excludedAppDao?.let { dao ->
@@ -86,19 +64,6 @@ class ExcludeAppsManager(private val context: Context) {
                     Toast.makeText(context, context.getString(R.string.error_saving_apps), Toast.LENGTH_SHORT).show()
                 }
             }
-        }
-    }
-
-    private fun restartVpnForNewSettings() {
-        try {
-            // Stop current VPN connection
-            de.blinkt.openvpn.core.ProfileManager.setConntectedVpnProfileDisconnected(context)
-
-            // Note: We don't automatically restart VPN here as it requires user interaction
-            // The next manual connect will use the updated settings
-            android.util.Log.d("ExcludeAppsManager", "VPN will use updated exclude app settings on next connect")
-        } catch (e: Exception) {
-            android.util.Log.e("ExcludeAppsManager", "Error handling VPN restart for new settings", e)
         }
     }
 

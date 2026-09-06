@@ -22,13 +22,33 @@
         <item>less than (&lt;)</item>
         <item>less than or equal (&lt;=)</item>
     </string-array>
+    <string name="operator_equal" translatable="false">=</string>
+    <string name="operator_greater" translatable="false">&gt;</string>
+    <string name="operator_greater_equal" translatable="false">&gt;=</string>
+    <string name="operator_less" translatable="false">&lt;</string>
+    <string name="operator_less_equal" translatable="false">&lt;=</string>
     <string name="about">About</string>
     <string name="setting">Setting</string>
     <string name="help">Help</string>
     <string name="speed">Speed</string>
+    <string name="speed_unit" translatable="false">Mb/s</string>
+    <string name="ping_unit" translatable="false">ms</string>
     <string name="hostname">Hostname</string>
     <string name="score">Score</string>
     <string name="score_short">Score</string>
+    <string name="go_back">Go back</string>
+    <string name="l2tp_end_point">Server / endpoint</string>
+    <string name="l2tp_connect">Connect via L2TP</string>
+    <string name="openvpn_over_tcp">OpenVPN over TCP</string>
+    <string name="openvpn_over_udp">OpenVPN over UDP</string>
+    <string name="softether_over_tcp">SoftEther SSL-VPN over TCP</string>
+    <string name="softether_over_udp">SoftEther SSL-VPN over UDP</string>
+    <string name="connect_use_ms_sstp">Connect via MS-SSTP</string>
+    <string name="vpn_protocol_selection_title">Select VPN protocol</string>
+    <string name="operator_message_title">Message from server operator</string>
+    <string name="connect_use">Use</string>
+    <string name="connect_use_tcp">TCP</string>
+    <string name="connect_use_udp">UDP</string>
     <string name="ping">Ping</string>
     <string name="session">Session</string>
     <string name="max_session">Max Session</string>
@@ -92,6 +112,17 @@
         <item>24 hours</item>
         <item>Never</item>
     </string-array>
+    <string name="cache_time_15m">15 minutes</string>
+    <string name="cache_time_30m">30 minutes</string>
+    <string name="cache_time_1h">1 hours</string>
+    <string name="cache_time_2h">2 hours</string>
+    <string name="cache_time_4h">4 hours</string>
+    <string name="cache_time_6h">6 hours</string>
+    <string name="cache_time_12h">12 hours</string>
+    <string name="cache_time_24h">24 hours</string>
+    <string name="cache_time_never">Never</string>
+    <string name="startup_screen_list">List screen</string>
+    <string name="startup_screen_status">Status screen</string>
     <string name="setting_developer_mode_label">Developer Mode (logging)</string>
     <string name="setting_developer_mode_summary">Keep diagnostic logs enabled for troubleshooting. Turn off for maximum speed.</string>
     <string name="setting_language_label">Language</string>

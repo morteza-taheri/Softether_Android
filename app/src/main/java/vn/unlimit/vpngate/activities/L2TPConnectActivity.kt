@@ -1,113 +1,45 @@
 package vn.unlimit.vpngate.activities
 
-import android.annotation.SuppressLint
-import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.View
-import android.widget.RelativeLayout
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
+import androidx.core.content.IntentCompat
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updateLayoutParams
-import androidx.core.view.updatePadding
-import com.bumptech.glide.Glide
-import vn.unlimit.vpngate.App
-import vn.unlimit.vpngate.R
-import vn.unlimit.vpngate.databinding.ActivityL2tpConnectBinding
+import vn.unlimit.vpngate.ui.screens.l2tp.L2tpConnectScreen
+import vn.unlimit.vpngate.ui.theme.VpnGateTheme
 import vn.unlimit.vpngate.models.VPNGateConnection
 import vn.unlimit.vpngate.provider.BaseProvider
 import vn.unlimit.vpngate.utils.DataUtil
 
-class L2TPConnectActivity : AppCompatActivity(), View.OnClickListener {
+class L2TPConnectActivity : AppCompatActivity() {
     private var mVPNGateConnection: VPNGateConnection? = null
-    private var dataUtil: DataUtil = App.instance!!.dataUtil!!
-    private lateinit var binding: ActivityL2tpConnectBinding
 
-    companion object {
-        const val TYPE_FREE = 0
-        const val TYPE_PAID = 1
-    }
-
-    @SuppressLint("SetTextI18n")
-    override fun onCreate(savedInstanceState: Bundle?) {
+    public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        binding = ActivityL2tpConnectBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        val initialRootLeft = binding.root.paddingLeft
-        val initialRootRight = binding.root.paddingRight
-        val initialNavHeight = binding.navDetail.layoutParams.height
-        val initialNavTop = binding.navDetail.paddingTop
-        val initialNavLeft = binding.navDetail.paddingLeft
-        val initialNavRight = binding.navDetail.paddingRight
-        val initialNavBottom = binding.navDetail.paddingBottom
-        val initialBackTopMargin = (binding.btnBack.layoutParams as RelativeLayout.LayoutParams).topMargin
-        val initialScrollBottom = binding.scrollView.paddingBottom
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, windowInsets ->
-            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            binding.root.updatePadding(
-                left = initialRootLeft + insets.left,
-                right = initialRootRight + insets.right
-            )
-            binding.navDetail.updateLayoutParams {
-                height = initialNavHeight + insets.top
-            }
-            binding.navDetail.updatePadding(
-                top = initialNavTop,
-                left = initialNavLeft + insets.left,
-                right = initialNavRight + insets.right,
-                bottom = initialNavBottom
-            )
-            binding.btnBack.updateLayoutParams<RelativeLayout.LayoutParams> {
-                addRule(RelativeLayout.CENTER_VERTICAL, 0)
-                addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE)
-                topMargin = initialBackTopMargin + initialNavTop + insets.top
-            }
-            binding.scrollView.updatePadding(bottom = initialScrollBottom + insets.bottom)
-            windowInsets
-        }
-        ViewCompat.requestApplyInsets(binding.root)
         try {
-            Glide.with(this)
-                .load(R.drawable.add_vpn_connection)
-                .placeholder(R.color.colorOverlay)
-                .error(R.color.colorOverlay)
-                .into(binding.ivStep1)
-            Glide.with(this)
-                .load(R.drawable.connected_vpn)
-                .placeholder(R.color.colorOverlay)
-                .error(R.color.colorOverlay)
-                .into(binding.ivStep2)
-            binding.btnBack.setOnClickListener(this)
-            mVPNGateConnection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    intent.getParcelableExtra(BaseProvider.PASS_DETAIL_VPN_CONNECTION, VPNGateConnection::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                intent.getParcelableExtra(BaseProvider.PASS_DETAIL_VPN_CONNECTION)
-            }
-            binding.txtTitle.text =
-                getString(R.string.l2tp_connect_title, mVPNGateConnection?.hostName)
-            binding.txtHint.text = getString(R.string.l2tp_connect_hint, mVPNGateConnection?.hostName)
-            if (dataUtil.getBooleanSetting(DataUtil.USE_DOMAIN_TO_CONNECT, false)) {
-                binding.txtEndPoint.text = mVPNGateConnection?.hostName + ".opengw.net"
-            } else {
-                binding.txtEndPoint.text = mVPNGateConnection?.ip
-            }
+            mVPNGateConnection = IntentCompat.getParcelableExtra(
+                intent, BaseProvider.PASS_DETAIL_VPN_CONNECTION,
+                VPNGateConnection::class.java,
+            )
         } catch (e: Exception) {
             e.printStackTrace()
         }
-    }
-
-    private fun loadBannerAds() {
-        // Ads removed.
-    }
-
-    override fun onClick(view: View?) {
-        if (view == binding.btnBack) {
-            onBackPressedDispatcher.onBackPressed()
+        val dataUtil = (application as vn.unlimit.vpngate.App).dataUtil!!
+        val useDomain = dataUtil.getBooleanSetting(DataUtil.USE_DOMAIN_TO_CONNECT, false)
+        setContent {
+            VpnGateTheme {
+                L2tpConnectScreen(
+                    hostName = mVPNGateConnection?.hostName,
+                    endPoint = if (useDomain) {
+                        mVPNGateConnection?.hostName + ".opengw.net"
+                    } else {
+                        mVPNGateConnection?.ip
+                    },
+                    onBack = { onBackPressedDispatcher.onBackPressed() },
+                )
+            }
         }
     }
-
 }

@@ -5,34 +5,35 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updatePadding
-import vn.unlimit.vpngate.databinding.ActivitySplashBinding
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import vn.unlimit.vpngate.R
+import vn.unlimit.vpngate.ui.theme.VpnGateTheme
 
 @SuppressLint("CustomSplashScreen")
 class SplashActivity : AppCompatActivity() {
-    companion object {
-        private const val TAG = "SplashActivity"
-    }
-
-    private lateinit var binding: ActivitySplashBinding
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        binding = ActivitySplashBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        val initialLoadingBottom = binding.txtLoadingText.paddingBottom
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, windowInsets ->
-            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            binding.txtLoadingText.updatePadding(bottom = initialLoadingBottom + insets.bottom)
-            windowInsets
+        setContent {
+            VpnGateTheme {
+                SplashContent()
+            }
         }
-        ViewCompat.requestApplyInsets(binding.root)
         launchMain()
     }
 
@@ -42,5 +43,34 @@ class SplashActivity : AppCompatActivity() {
             startActivity(actIntent)
             finish()
         }, 250)
+    }
+}
+
+@Composable
+private fun SplashContent() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Image(
+            painter = painterResource(R.drawable.splash_logo),
+            contentDescription = stringResource(R.string.app_name),
+            modifier = Modifier.size(160.dp),
+        )
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = 24.dp),
+        verticalArrangement = Arrangement.Bottom,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        CircularProgressIndicator(modifier = Modifier.size(28.dp))
+        Text(
+            stringResource(R.string.default_loading_text),
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(top = 6.dp),
+        )
     }
 }
