@@ -79,6 +79,10 @@ class ConnectionListViewModel(application: Application) : BaseViewModel(applicat
                             " (fromCache=${result.fromCache}). Total in database: $itemCount"
                     )
                     dataUtil.connectionsCache = connectionList
+                    // Record the last successful refresh for the UI chip.
+                    if (!result.fromCache) {
+                        dataUtil.connectionListLastUpdated = java.util.Date()
+                    }
                 }
             } catch (e: Throwable) {
                 Log.e(TAG, "Got exception when collecting servers", e)

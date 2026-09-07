@@ -121,6 +121,25 @@ class DataUtil(context: Context?) {
         editor.apply()
     }
 
+    /** Timestamp of the last successful server-list refresh (any source). */
+    var connectionListLastUpdated: Date?
+        get() {
+            return try {
+                val jsonString = sharedPreferencesSetting!!.getString(
+                    "vpn_list_last_updated", null,
+                ) ?: return null
+                gson!!.fromJson(jsonString, Date::class.java)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
+        set(value) {
+            val editor = sharedPreferencesSetting!!.edit()
+            editor.putString("vpn_list_last_updated", gson!!.toJson(value))
+            editor.apply()
+        }
+
     val connectionCacheExpires: Date?
         /**
          * Get connection cache from shared preferences

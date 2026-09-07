@@ -92,6 +92,9 @@ class AutoModeController(
      * - While Connected (the run is done but the connected watcher is
      *   armed): disconnects the live tunnel and starts a fresh run over
      *   the remaining candidates.
+     * - While Error (the run exhausted or aborted): resumes from the
+     *   server AFTER the last attempted one instead of restarting from
+     *   the top of the list.
      * Outside a live run it just logs and returns.
      */
     private val skipRequested = java.util.concurrent.atomic.AtomicBoolean(false)
@@ -100,14 +103,29 @@ class AutoModeController(
         val current = _state.value
         val connecting = current is AutoModeState.Connecting && isRunning
         val connectedArmed = current is AutoModeState.Connected && connectedWatcher?.isActive == true
-        if (!connecting && !connectedArmed) {
+        val errored = current is AutoModeState.Error && !isRunning
+        if (!connecting && !connectedArmed && !errored) {
             adapter.log("[AUTO] Skip requested but no attempt in flight")
             return
         }
         adapter.log("[AUTO] Skipping current server; trying next")
-        skipRequested.set(true)
-        if (connecting) {
-            adapterSkipSignal?.invoke()
+        when {
+            connecting -> {
+                skipRequested.set(true)
+                adapterSkipSignal?.invoke()
+            }
+            errored -> {
+                // Resume the run over the servers that follow the last attempt.
+                skipRequested.set(false)
+                val remaining = remainingCandidates
+                if (remaining.isEmpty()) {
+                    adapter.log("[AUTO] No more servers to try")
+                } else {
+                    overrideServers = remaining
+                    start()
+                }
+            }
+            else -> skipRequested.set(true)
         }
     }
 
@@ -249,6 +267,9 @@ class AutoModeController(
             val key = "${server.ip}|${server.hostname ?: ""}"
             if (!attempted.add(key)) continue
             attempt++
+            // Track where to resume if the user presses Try next server
+            // after this run ends in Error (exhausted/aborted).
+            remainingCandidates = servers.drop(attempt)
 
             adapter.log("[AUTO] Trying #$attempt ${server.hostname ?: server.ip}")
             skipRequested.set(false)

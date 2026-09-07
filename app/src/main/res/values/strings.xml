@@ -1,6 +1,8 @@
 <resources>
-    <string name="app_name" translatable="false">VPN Gate Connector</string>
-    <string name="home">Home</string>
+    <string name="app_name" translatable="false">VpnM</string>
+    <string name="home">Server list</string>
+    <string name="server_count_chip">%1$d servers</string>
+    <string name="last_updated_chip">Updated: %1$s</string>
     <string name="paid_server">Paid Server</string>
     <string name="navigation_drawer_open">Open drawer</string>
     <string name="navigation_drawer_close">Close drawer</string>
@@ -264,6 +266,9 @@
     <string name="auto_mode_error_no_server">Could not connect to any available server.</string>
     <string name="auto_mode_error_generic">Auto Mode failed. Tap to try again.</string>
     <string name="auto_mode_error_vpn_permission">VPN permission is required for Auto Mode. Please allow it and try again.</string>
+    <string name="auto_mode_error_notification_permission">Notification permission is needed to keep the VPN alive in the background. Please allow it and try again.</string>
+    <string name="auto_mode_error_battery_permission">Please disable battery optimization for reliable background connections. Please allow it and try again.</string>
+    <string name="auto_mode_need_permissions">Auto Mode needs a few permissions before connecting. Grant them, then press again.</string>
     <string name="auto_mode_try_next_server">Try next server</string>
     <string name="auto_mode_log_title">Log</string>
     <string name="auto_mode_log_copy">Copy</string>

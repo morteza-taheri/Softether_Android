@@ -61,8 +61,8 @@ android {
             dimension "tier"
             applicationId "vn.unlimit.vpngatepro"
             signingConfig signingConfigs.pro
-            versionCode 133
-            versionName "2.4.0"
+            versionCode 134
+            versionName "2.4.1"
         }
     }
 

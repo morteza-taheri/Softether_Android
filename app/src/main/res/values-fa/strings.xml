@@ -1,5 +1,8 @@
 <resources>
-    <string name="home">خانه</string>
+    <string name="app_name">VpnM</string>
+    <string name="home">لیست سرورها</string>
+    <string name="server_count_chip">%1$d سرور</string>
+    <string name="last_updated_chip">بروزرسانی: %1$s</string>
     <string name="paid_server">سرور اشتراکی</string>
     <string name="navigation_drawer_open">باز کردن منو</string>
     <string name="navigation_drawer_close">بستن منو</string>
@@ -237,6 +240,9 @@
     <string name="auto_mode_error_no_server">اتصال به هیچ سرور قابل‌دستیابی ممکن نشد.</string>
     <string name="auto_mode_error_generic">حالت خودکار ناموفق بود. برای تلاش مجدد ضربه بزنید.</string>
     <string name="auto_mode_error_vpn_permission">حالت خودکار به مجوز VPN نیاز دارد. لطفاً اجازه دهید و دوباره تلاش کنید.</string>
+    <string name="auto_mode_error_notification_permission">برای پایداری اتصال در پس‌زمینه به مجوز اعلان‌ها نیاز است. لطفاً اجازه دهید و دوباره تلاش کنید.</string>
+    <string name="auto_mode_error_battery_permission">برای اتصال پایدار در پس‌زمینه، بهینه‌سازی باتری را برای این برنامه خاموش کنید. لطفاً اجازه دهید و دوباره تلاش کنید.</string>
+    <string name="auto_mode_need_permissions">حالت خودکار پیش از اتصال به چند مجوز نیاز دارد. آن‌ها را بدهید و دوباره بزنید.</string>
     <string name="auto_mode_try_next_server">امتحان سرور بعدی</string>
     <string name="auto_mode_log_title">گزارش</string>
     <string name="auto_mode_log_copy">کپی</string>

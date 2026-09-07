@@ -20,11 +20,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Update
 import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -275,32 +276,47 @@ fun HomeScreen(
                     },
                 ) { padding ->
                     val model = list
+                    // Info line: server count + last update (persian/gregorian per locale)
+                    val lastUpdated = remember { dataUtil.connectionListLastUpdated }
+                    val lastUpdatedText = lastUpdated?.let {
+                        vn.unlimit.vpngate.utils.CalendarFormatter.formatDateTime(context, it)
+                    }
+                    val totalCount = model?.size() ?: 0
                     if (model == null || model.size() == 0) {
-                        Box(
+                        Column(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(padding),
-                            contentAlignment = Alignment.Center,
                         ) {
-                            emptyMessageRes?.let {
-                                Text(
-                                    if (it == R.string.empty_search_result) {
-                                        stringResource(it, keyword)
-                                    } else {
-                                        stringResource(it)
-                                    },
+                            ListInfoHeader(
+                                serverCount = totalCount,
+                                lastUpdatedText = lastUpdatedText,
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                emptyMessageRes?.let {
+                                    Text(
+                                        if (it == R.string.empty_search_result) {
+                                            stringResource(it, keyword)
+                                        } else {
+                                            stringResource(it)
+                                        },
+                                        modifier = Modifier.padding(24.dp),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        textAlign = TextAlign.Center,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                } ?: Text(
+                                    stringResource(R.string.no_server_available),
                                     modifier = Modifier.padding(24.dp),
                                     style = MaterialTheme.typography.bodyLarge,
                                     textAlign = TextAlign.Center,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                            } ?: Text(
-                                stringResource(R.string.no_server_available),
-                                modifier = Modifier.padding(24.dp),
-                                style = MaterialTheme.typography.bodyLarge,
-                                textAlign = TextAlign.Center,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            }
                         }
                     } else {
                         PullToRefreshBox(
@@ -317,6 +333,12 @@ fun HomeScreen(
                                 ),
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
+                                item(key = "list-info-header") {
+                                    ListInfoHeader(
+                                        serverCount = totalCount,
+                                        lastUpdatedText = lastUpdatedText,
+                                    )
+                                }
                                 items(
                                     count = model.size(),
                                     key = { index ->
@@ -418,6 +440,32 @@ private fun copyToClipboard(context: Context, text: String) {
         Toast.makeText(context, context.getString(R.string.copied), Toast.LENGTH_SHORT).show()
     } catch (e: Exception) {
         e.printStackTrace()
+    }
+}
+
+/** Server count + last-update chip shown at the top of the list. */
+@Composable
+private fun ListInfoHeader(
+    serverCount: Int,
+    lastUpdatedText: String?,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        vn.unlimit.vpngate.ui.components.MetricChip(
+            icon = androidx.compose.material.icons.Icons.Filled.Storage,
+            text = stringResource(R.string.server_count_chip, serverCount),
+        )
+        if (lastUpdatedText != null) {
+            vn.unlimit.vpngate.ui.components.MetricChip(
+                icon = androidx.compose.material.icons.Icons.Filled.Update,
+                text = stringResource(R.string.last_updated_chip, lastUpdatedText),
+            )
+        }
     }
 }
 

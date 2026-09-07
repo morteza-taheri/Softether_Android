@@ -25,6 +25,10 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -93,18 +97,94 @@ fun AutoModeScreen() {
         developerMode = viewModel.dataUtil.getDeveloperMode()
     }
 
-    // VPN permission must be granted BEFORE Auto Mode starts (§12).
+    // ---- Permission gates (§12): tunnel, notifications, battery ----
+    // Stage machine: 1 = check VPN tunnel, 2 = check notifications,
+    // 3 = check battery exemption. Launchers bump the stage on result;
+    // the LaunchedEffect below drives the chain (no forward references).
+    var gateStage by remember { mutableStateOf(0) }
     val vpnPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            viewModel.onButtonPressed()
-        } else {
+        gateStage = if (result.resultCode == Activity.RESULT_OK) 2 else 0
+        if (result.resultCode != Activity.RESULT_OK) {
             Toast.makeText(
                 context,
                 context.getString(R.string.auto_mode_error_vpn_permission),
                 Toast.LENGTH_LONG,
             ).show()
+        }
+    }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        // Re-run the notification stage: with the grant it advances to 3.
+        gateStage = if (granted) 2 else 0
+        if (!granted) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.auto_mode_error_notification_permission),
+                Toast.LENGTH_LONG,
+            ).show()
+        }
+    }
+    LaunchedEffect(gateStage) {
+        when (gateStage) {
+            1 -> {
+                // 1) OS VPN tunnel permission
+                try {
+                    val prepareIntent = VpnService.prepare(context)
+                    if (prepareIntent == null) {
+                        gateStage = 2
+                    } else {
+                        vpnPermissionLauncher.launch(prepareIntent)
+                    }
+                } catch (e: ActivityNotFoundException) {
+                    gateStage = 0
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.auto_mode_error_vpn_permission),
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
+            }
+            2 -> {
+                // 2) Notifications (Android 13+): the foreground service needs
+                //    them to keep the tunnel alive in the background.
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+                    androidx.core.content.ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.POST_NOTIFICATIONS,
+                    ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                ) {
+                    notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    gateStage = 3
+                }
+            }
+            3 -> {
+                gateStage = 0
+                // 3) Battery optimization exemption (one shot): open the
+                //    exemption page once; the user re-presses the button
+                //    afterwards and all gates pass instantly.
+                try {
+                    val pm = context.getSystemService(android.content.Context.POWER_SERVICE)
+                            as android.os.PowerManager
+                    if (!pm.isIgnoringBatteryOptimizations(context.packageName)) {
+                        val batteryIntent = android.content.Intent(
+                            android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                            android.net.Uri.parse("package:" + context.packageName),
+                        )
+                        if (batteryIntent.resolveActivity(context.packageManager) != null) {
+                            context.startActivity(batteryIntent)
+                            return@LaunchedEffect
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                // All gates passed — start the run.
+                viewModel.onButtonPressed()
+            }
         }
     }
 
@@ -115,35 +195,59 @@ fun AutoModeScreen() {
             viewModel.onButtonPressed()
             return
         }
-        try {
-            val prepareIntent = VpnService.prepare(context)
-            if (prepareIntent == null) {
-                viewModel.onButtonPressed()
-            } else {
-                vpnPermissionLauncher.launch(prepareIntent)
-            }
-        } catch (e: ActivityNotFoundException) {
-            Toast.makeText(
-                context,
-                context.getString(R.string.auto_mode_error_vpn_permission),
-                Toast.LENGTH_LONG,
-            ).show()
-        }
+        gateStage = 1
     }
 
-    val (buttonColor, buttonTextRes, buttonEnabled) = when (val s = state) {
-        is AutoModeState.Disconnected ->
-            Triple(ExtendedTheme.autoDisconnected, R.string.auto_mode_state_disconnected, true)
-        is AutoModeState.Connecting ->
-            Triple(ExtendedTheme.autoConnecting, R.string.auto_mode_state_connecting, true)
-        is AutoModeState.Connected ->
-            Triple(ExtendedTheme.autoConnected, R.string.auto_mode_state_connected, true)
-        is AutoModeState.Error ->
-            Triple(ExtendedTheme.autoDisconnected, R.string.auto_mode_state_error, true)
-        else ->
-            Triple(ExtendedTheme.autoDisconnected, R.string.auto_mode_state_disconnected, true)
+    // ---- State → visuals ----
+    val (color, colorDeep, labelRes, subLabel, icon, connecting) = when (val s = state) {
+        is AutoModeState.Disconnected -> ButtonVisuals(
+            color = MaterialTheme.colorScheme.primary,
+            colorDeep = vn.unlimit.vpngate.ui.theme.ExtendedTheme.primaryDark,
+            labelRes = R.string.auto_mode_state_disconnected,
+            subLabel = null,
+            icon = Icons.Filled.PowerSettingsNew,
+            connecting = false,
+        )
+        is AutoModeState.Connecting -> ButtonVisuals(
+            color = ExtendedTheme.autoConnecting,
+            colorDeep = ExtendedTheme.autoConnecting.copy(alpha = 0.65f),
+            labelRes = R.string.auto_mode_state_connecting,
+            subLabel = context.getString(
+                R.string.auto_mode_attempt_progress, s.attempt, s.total,
+            ),
+            icon = null,
+            connecting = true,
+        )
+        is AutoModeState.Connected -> ButtonVisuals(
+            color = ExtendedTheme.autoConnected,
+            colorDeep = ExtendedTheme.autoConnected.copy(alpha = 0.65f),
+            labelRes = R.string.auto_mode_state_connected,
+            subLabel = s.hostname,
+            icon = Icons.Filled.ThumbUp,
+            connecting = false,
+        )
+        is AutoModeState.Error -> ButtonVisuals(
+            color = ExtendedTheme.autoDisconnected,
+            colorDeep = ExtendedTheme.autoDisconnected.copy(alpha = 0.65f),
+            labelRes = R.string.auto_mode_state_error,
+            subLabel = null,
+            icon = Icons.Filled.Close,
+            connecting = false,
+        )
+        else -> ButtonVisuals(
+            color = MaterialTheme.colorScheme.primary,
+            colorDeep = vn.unlimit.vpngate.ui.theme.ExtendedTheme.primaryDark,
+            labelRes = R.string.auto_mode_state_disconnected,
+            subLabel = null,
+            icon = Icons.Filled.PowerSettingsNew,
+            connecting = false,
+        )
     }
-    val animatedColor by animateColorAsState(buttonColor, label = "autoBtnColor")
+    val animatedColor by animateColorAsState(color, label = "autoBtnColor")
+    val animatedDeep by animateColorAsState(colorDeep, label = "autoBtnDeep")
+    val canSkip = state is AutoModeState.Connecting ||
+            state is AutoModeState.Connected ||
+            state is AutoModeState.Error
 
     androidx.compose.material3.Scaffold(
         topBar = {
@@ -163,55 +267,22 @@ fun AutoModeScreen() {
                 .padding(horizontal = 20.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                stringResource(buttonTextRes),
-                style = MaterialTheme.typography.headlineSmall,
-            )
-            if (state is AutoModeState.Connecting) {
-                val connecting = state as AutoModeState.Connecting
-                Text(
-                    stringResource(
-                        R.string.auto_mode_attempt_progress,
-                        connecting.attempt,
-                        connecting.total,
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-            }
-            Button(
+            AutoModePowerButton(
+                stateLabel = stringResource(labelRes),
+                subLabel = subLabel,
+                color = animatedColor,
+                colorDeep = animatedDeep,
+                icon = icon,
+                connecting = connecting,
                 onClick = { startAutoModeOrRequestPermission() },
-                colors = ButtonDefaults.buttonColors(containerColor = animatedColor),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 20.dp)
-                    .height(88.dp),
-                shape = MaterialTheme.shapes.large,
-            ) {
-                if (state is AutoModeState.Connecting) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .padding(end = 12.dp)
-                            .height(24.dp)
-                            .width(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp,
-                    )
-                }
-                Text(
-                    stringResource(buttonTextRes),
-                    style = MaterialTheme.typography.titleLarge,
-                )
-            }
-            OutlinedButton(
+                modifier = Modifier.padding(top = 12.dp),
+            )
+            TryNextServerButton(
+                label = stringResource(R.string.auto_mode_try_next_server),
+                enabled = canSkip,
                 onClick = { viewModel.tryNextServer() },
-                enabled = state is AutoModeState.Connecting || state is AutoModeState.Connected,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 10.dp),
-            ) {
-                Text(stringResource(R.string.auto_mode_try_next_server))
-            }
+                modifier = Modifier.padding(top = 10.dp),
+            )
             if (state is AutoModeState.Error) {
                 val error = state as AutoModeState.Error
                 Text(
@@ -392,6 +463,15 @@ private fun ServerInfoCard(
         }
     }
 }
+
+private data class ButtonVisuals(
+    val color: Color,
+    val colorDeep: Color,
+    val labelRes: Int,
+    val subLabel: String?,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector?,
+    val connecting: Boolean,
+)
 
 private fun formatLog(state: AutoModeState, context: Context): String {
     val protocol = when (state) {
