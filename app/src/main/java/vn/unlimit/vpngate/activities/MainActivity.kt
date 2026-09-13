@@ -40,7 +40,7 @@ class MainActivity : AppCompatActivity() {
     private var dataUtil: DataUtil? = null
     private var doubleBackToExitPressedOnce: Boolean = false
     private var isInFront = false
-    private var startDestination: String = NavRoutes.HOME
+    private var startDestination: String = NavRoutes.AUTO
 
     private val broadcastReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -66,19 +66,18 @@ class MainActivity : AppCompatActivity() {
         dataUtil = (application as App).dataUtil
         connectionListViewModel = ViewModelProvider(this)[ConnectionListViewModel::class.java]
 
-        // Start destination: follow the startup-screen setting (like the old
-        // initState()) — Status only when a last connection exists.
+        // Start destination: AutoMode by default, or follows the startup-screen setting
         val targetFragment = intent.getStringExtra(TARGET_FRAGMENT)
-        val openAutoMode = intent.getBooleanExtra(OPEN_AUTO_MODE, false)
+        val startupScreenSetting = dataUtil!!.getIntSetting(DataUtil.SETTING_STARTUP_SCREEN, 0)
         startDestination = when {
-            openAutoMode -> NavRoutes.AUTO
             targetFragment == "status" -> NavRoutes.STATUS
-            dataUtil!!.getIntSetting(DataUtil.SETTING_STARTUP_SCREEN, 0) == 1 &&
-                    dataUtil!!.lastVPNConnection != null -> NavRoutes.STATUS
-            else -> NavRoutes.HOME
+            targetFragment == "auto" -> NavRoutes.AUTO
+            targetFragment == "home" -> NavRoutes.HOME
+            startupScreenSetting == 1 -> NavRoutes.HOME
+            startupScreenSetting == 2 && dataUtil!!.lastVPNConnection != null -> NavRoutes.STATUS
+            else -> NavRoutes.AUTO
         }
         intent.removeExtra(TARGET_FRAGMENT)
-        intent.removeExtra(OPEN_AUTO_MODE)
 
         val filter = IntentFilter()
         filter.addAction(BaseProvider.ACTION.ACTION_CHANGE_NETWORK_STATE)
@@ -139,7 +138,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val TARGET_FRAGMENT: String = "TARGET_FRAGMENT"
-        const val OPEN_AUTO_MODE: String = "vn.unlimit.vpngate.OPEN_AUTO_MODE"
         private const val TAG = "MainActivity"
     }
 }

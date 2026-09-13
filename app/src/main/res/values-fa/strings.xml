@@ -1,8 +1,5 @@
 <resources>
-    <string name="app_name">VpnM</string>
     <string name="home">لیست سرورها</string>
-    <string name="server_count_chip">%1$d سرور</string>
-    <string name="last_updated_chip">بروزرسانی: %1$s</string>
     <string name="paid_server">سرور اشتراکی</string>
     <string name="navigation_drawer_open">باز کردن منو</string>
     <string name="navigation_drawer_close">بستن منو</string>
@@ -102,6 +99,7 @@
     <string name="cache_time_12h">۱۲ ساعت</string>
     <string name="cache_time_24h">۲۴ ساعت</string>
     <string name="cache_time_never">هرگز</string>
+    <string name="startup_screen_auto">صفحهٔ اتصال خودکار</string>
     <string name="startup_screen_list">صفحهٔ فهرست</string>
     <string name="startup_screen_status">صفحهٔ وضعیت</string>
     <string name="setting_developer_mode_label">حالت توسعه‌دهنده (لاگ‌ها)</string>
@@ -214,7 +212,10 @@
     <string name="use_domain_hint">استفاده از دامنهٔ .opengw.net برای اتصال به سرور VPN به‌جای نشانی IP سرور</string>
     <string name="empty_search_result">سروری با کلیدواژهٔ «%1$s» پیدا نشد</string>
     <string name="empty_filter_result">سروری با این فیلتر پیدا نشد</string>
-    <string name="no_server_available">سروری موجود نیست. برای تازه‌سازی پایین بکشید.</string>
+    <string name="no_server_available">هیچ سروری در دسترس نیست. لطفاً لیست سرورها را به‌روزرسانی کنید.</string>
+    <string name="refresh">به‌روزرسانی</string>
+    <string name="refresh_servers">به‌روزرسانی سرورها</string>
+    <string name="update_server_list_first">اول لیست سرور ها را بروز رسانی کن</string>
     <!-- L2TPConnect -->
     <string name="l2tp_connect_title">اتصال به «%1$s» از طریق L2TP/IPSec</string>
     <string name="l2tp_connect_hint">برای اتصال به سرور «%1$s» از طریق VPN با L2TP/IPSec مراحل زیر را دنبال کنید</string>
@@ -240,9 +241,6 @@
     <string name="auto_mode_error_no_server">اتصال به هیچ سرور قابل‌دستیابی ممکن نشد.</string>
     <string name="auto_mode_error_generic">حالت خودکار ناموفق بود. برای تلاش مجدد ضربه بزنید.</string>
     <string name="auto_mode_error_vpn_permission">حالت خودکار به مجوز VPN نیاز دارد. لطفاً اجازه دهید و دوباره تلاش کنید.</string>
-    <string name="auto_mode_error_notification_permission">برای پایداری اتصال در پس‌زمینه به مجوز اعلان‌ها نیاز است. لطفاً اجازه دهید و دوباره تلاش کنید.</string>
-    <string name="auto_mode_error_battery_permission">برای اتصال پایدار در پس‌زمینه، بهینه‌سازی باتری را برای این برنامه خاموش کنید. لطفاً اجازه دهید و دوباره تلاش کنید.</string>
-    <string name="auto_mode_need_permissions">حالت خودکار پیش از اتصال به چند مجوز نیاز دارد. آن‌ها را بدهید و دوباره بزنید.</string>
     <string name="auto_mode_try_next_server">امتحان سرور بعدی</string>
     <string name="auto_mode_log_title">گزارش</string>
     <string name="auto_mode_log_copy">کپی</string>
@@ -252,7 +250,19 @@
     <string name="auto_mode_notification_connecting">در حال اتصال به %1$s (%2$d/%3$d)…</string>
     <string name="auto_mode_notification_connected">متصل به %1$s از طریق %2$s</string>
     <string name="auto_mode_log_copied">گزارش در کلیپ‌بورد کپی شد</string>
-    <string name="title_home">خانه</string>
+    <string name="auto_mode_tap_to_connect">برای اتصال ضربه بزنید</string>
+    <string name="auto_mode_tap_to_disconnect">برای قطع اتصال ضربه بزنید</string>
+    <string name="auto_mode_tap_to_stop">برای لغو ضربه بزنید</string>
+    <string name="auto_mode_tap_to_retry">برای تلاش مجدد ضربه بزنید</string>
+    <string name="auto_mode_permission_battery_title">بهینه‌سازی باتری در پس‌زمینه</string>
+    <string name="auto_mode_permission_battery_desc">برای جلوگیری از قطع شدن اتصال وی‌پی‌ان در پس‌زمینه توسط اندروید، لطفاً مصرف باتری را روی حالت بدون محدودیت قرار دهید.</string>
+    <string name="auto_mode_permission_battery_allow">تنظیم</string>
+    <string name="auto_mode_permission_battery_skip">بعداً</string>
+    <string name="auto_mode_connected_secure">متصل و ایمن</string>
+    <string name="title_home">لیست سرورها</string>
+    <string name="server_list_count">%1$d سرور</string>
+    <string name="server_list_last_updated">آخرین بروزرسانی: %1$s</string>
+    <string name="server_list_never_updated">هنوز بروزرسانی نشده</string>
     <string name="title_servers">سرورها</string>
     <string name="title_free_server">سرور رایگان</string>
     <string name="title_personal">شخصی</string>
@@ -306,4 +316,20 @@
     <string name="softether_session_setup">برقراری نشست SoftEther…</string>
     <string name="softether_disconnecting">در حال قطع اتصال SoftEther…</string>
     <string name="error_unknown">خطای نامشخصی رخ داد. لطفاً دوباره تلاش کنید.</string>
+    <string name="get_servers">دریافت لیست سرورها</string>
+    <string name="update_servers">به‌روزرسانی سرورها</string>
+    <string name="servers_count_label">%1$d سرور در دسترس</string>
+    <string name="auto_mode_no_servers_banner">لیست سرورها خالی است. لطفاً ابتدا لیست سرورها را دریافت کنید.</string>
+    <string name="setting_protocol_priority_title">اولویت پروتکل‌های اتصال خودکار</string>
+    <string name="setting_protocol_priority_summary">پروتکل‌های فعال و ترتیب اولویت آن‌ها را مشخص کنید</string>
+    <string name="proto_softether_udp">SoftEther UDP</string>
+    <string name="proto_softether_tcp">SoftEther TCP</string>
+    <string name="proto_sstp">MS-SSTP</string>
+    <string name="proto_openvpn_udp">OpenVPN UDP</string>
+    <string name="proto_openvpn_tcp">OpenVPN TCP</string>
+    <string name="move_up">انتقال به بالا</string>
+    <string name="move_down">انتقال به پایین</string>
+    <string name="no_suitable_server_found">هیچ سرور مناسبی یافت نشد</string>
+    <string name="show_traffic_in_notification">نمایش ترافیک در اعلان</string>
+    <string name="show_traffic_in_notification_desc">نمایش ترافیک مصرفی و سرعت دانلود/آپلود در اعلان اتصال</string>
 </resources>

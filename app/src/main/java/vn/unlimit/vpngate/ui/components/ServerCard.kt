@@ -12,16 +12,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.NetworkCheck
-import androidx.compose.material.icons.filled.PowerSettingsNew
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.NetworkCheck
+import androidx.compose.material.icons.rounded.PowerSettingsNew
+import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,15 +30,22 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import vn.unlimit.vpngate.R
 import vn.unlimit.vpngate.models.VPNGateConnection
 import vn.unlimit.vpngate.utils.DataUtil
@@ -72,8 +80,9 @@ fun ServerCard(
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 FlagImage(
-                    url = "$baseUrl/images/flags/${connection.countryShort}.png",
-                    modifier = Modifier.size(34.dp),
+                    url = "$baseUrl/images/flags/${connection.countryShort?.uppercase() ?: ""}.png",
+                    countryCode = connection.countryShort,
+                    modifier = Modifier.size(36.dp),
                 )
                 Column(
                     modifier = Modifier
@@ -111,30 +120,43 @@ fun ServerCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MetricChip(
-                    icon = Icons.Filled.Speed,
+                    icon = Icons.Rounded.Speed,
                     text = connection.calculateSpeed + " " + stringResource(R.string.speed_unit),
                 )
                 MetricChip(
-                    icon = Icons.Filled.NetworkCheck,
+                    icon = Icons.Rounded.NetworkCheck,
                     text = connection.pingAsString + " " + stringResource(R.string.ping_unit),
                 )
                 MetricChip(
-                    icon = Icons.Filled.Storage,
+                    icon = Icons.Rounded.Storage,
                     text = connection.numVpnSessionAsString,
                 )
                 MetricChip(
-                    icon = Icons.Filled.Bolt,
+                    icon = Icons.Rounded.Bolt,
                     text = connection.getUpTimeShort(),
                 )
             }
             val badges = buildList {
-                if (isIncludeUdp && connection.tcpPort > 0) add(ProtocolBadges.TCP)
-                if (isIncludeUdp && connection.udpPort > 0) add(ProtocolBadges.UDP)
-                if (connection.seTcpPort > 0 || connection.seUdpPort > 0 || connection.seUdpSupported) {
-                    add(ProtocolBadges.SOFTETHER)
+                if (isIncludeUdp && connection.tcpPort > 0) {
+                    add("TCP:${connection.tcpPort}")
+                } else if (isIncludeUdp && !connection.openVpnConfigData.isNullOrEmpty()) {
+                    add("OpenVPN")
                 }
-                if (connection.isSSTPSupport()) add(ProtocolBadges.SSTP)
-                if (connection.isL2TPSupport()) add(ProtocolBadges.L2TP)
+                if (isIncludeUdp && connection.udpPort > 0) {
+                    add("UDP:${connection.udpPort}")
+                }
+                if (connection.seTcpPort > 0) {
+                    add("SoftEther:${connection.seTcpPort}")
+                } else if (connection.seUdpPort > 0 || connection.seUdpSupported) {
+                    add("SoftEther")
+                }
+                if (connection.isSSTPSupport()) {
+                    val port = connection.sstpConnectPort
+                    if (port > 0) add("SSTP:$port") else add("SSTP")
+                }
+                if (connection.isL2TPSupport()) {
+                    add("L2TP")
+                }
             }
             if (badges.isNotEmpty()) {
                 Row(
@@ -148,21 +170,53 @@ fun ServerCard(
     }
 }
 
-/** Flag loaded with Coil, rounded placeholder while loading. */
+/**
+ * Converts a 2-letter ISO country code (e.g. "JP", "US", "DE") into Unicode country flag emoji.
+ */
+fun countryCodeToEmoji(countryCode: String?): String {
+    if (countryCode.isNullOrBlank() || countryCode.length != 2) return "🌐"
+    val firstChar = countryCode[0].uppercaseChar()
+    val secondChar = countryCode[1].uppercaseChar()
+    if (firstChar !in 'A'..'Z' || secondChar !in 'A'..'Z') return "🌐"
+    val firstCodePoint = 0x1F1E6 + (firstChar - 'A')
+    val secondCodePoint = 0x1F1E6 + (secondChar - 'A')
+    return String(Character.toChars(firstCodePoint)) + String(Character.toChars(secondCodePoint))
+}
+
+/** Flag loaded with Coil, with instantaneous native emoji fallback. */
 @Composable
-fun FlagImage(url: String, modifier: Modifier = Modifier, corner: Dp = 8.dp) {
-    androidx.compose.foundation.layout.Box(
-        modifier = modifier.background(
-            MaterialTheme.colorScheme.surfaceVariant,
-            RoundedCornerShape(corner),
-        ),
+fun FlagImage(
+    url: String? = null,
+    countryCode: String? = null,
+    modifier: Modifier = Modifier,
+    corner: Dp = 8.dp,
+) {
+    val derivedCode = countryCode ?: url?.substringAfterLast('/')?.substringBefore('.')?.takeIf { it.length == 2 }
+    val emoji = remember(derivedCode) { countryCodeToEmoji(derivedCode) }
+    var imageFailed by remember(url) { mutableStateOf(false) }
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(corner))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
         contentAlignment = Alignment.Center,
     ) {
-        coil3.compose.AsyncImage(
-            model = url,
-            contentDescription = null,
-            modifier = modifier,
-        )
+        if (!url.isNullOrBlank() && !imageFailed) {
+            coil3.compose.AsyncImage(
+                model = url,
+                contentDescription = derivedCode,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+                onError = { imageFailed = true },
+            )
+        }
+        if (url.isNullOrBlank() || imageFailed) {
+            Text(
+                text = emoji,
+                fontSize = 20.sp,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
@@ -211,7 +265,7 @@ fun PowerButton(
                 )
             } else {
                 Icon(
-                    Icons.Filled.PowerSettingsNew,
+                    Icons.Rounded.PowerSettingsNew,
                     contentDescription = null,
                     modifier = Modifier.size(size / 2),
                     tint = if (activated) MaterialTheme.colorScheme.onPrimary else idleColor,

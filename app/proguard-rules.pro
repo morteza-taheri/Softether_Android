@@ -1,3 +1,10 @@
+# Keep the VpnStatus log listener interfaces used by the app's Auto Mode
+# module log window (dropped by the library's own R8 shrink otherwise).
+-keep class de.blinkt.openvpn.core.VpnStatus$LogListener
+-keep class de.blinkt.openvpn.core.LogItem
+-keepclassmembers class de.blinkt.openvpn.core.LogItem {public *;}
+-dontwarn de.blinkt.openvpn.core.VpnStatus$LogListener
+
 # Add project specific ProGuard rules here.
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.

@@ -47,46 +47,42 @@ class DataUtil(context: Context?) {
 
     var connectionsCache: VPNGateConnectionList?
         /**
-         * Get connection cache
+         * Get connection cache from internal Room database
          *
          * @return VPNGateConnectionList
          */
         get() {
             try {
-                Log.d(TAG, "get connectionsCache")
-                val inFile = File(mContext!!.filesDir, CONNECTION_CACHE_KEY)
-                if (!inFile.isFile) {
-                    return null
-                } else {
-                    val fileInputStream = FileInputStream(inFile)
-                    val reader = JsonReader(InputStreamReader(fileInputStream))
-                    val cacheType = object : TypeToken<Cache?>() {
-                    }.type
-                    val cache = gson!!.fromJson<Cache>(reader, cacheType)
-                    if (cache.isExpires()) {
-                        reader.close()
-                        return null
-                    } else {
-                        reader.close()
-                        val items = App.instance!!.vpnGateItemDao.getAll()
-                        Log.d(TAG, "Get ${items.size} from cache")
+                Log.d(TAG, "get connectionsCache from internal database")
+                val app = App.instance
+                if (app != null) {
+                    val items = app.vpnGateItemDao.getAll()
+                    if (items.isNotEmpty()) {
+                        Log.d(TAG, "Retrieved ${items.size} servers from internal database")
                         return VPNGateConnectionList().fromVPNGateItems(items)
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Got exception when get connection cache", e)
+                Log.e(TAG, "Got exception when reading server list from database", e)
             }
             return null
         }
         /**
-         * Set connection cache
-         *
+         * Set connection cache and persist into internal Room database
          */
-        set(_) {
+        set(value) {
             try {
+                if (value != null && value.size() > 0) {
+                    val app = App.instance
+                    if (app != null) {
+                        val items = value.toVPNGateItems()
+                        app.vpnGateItemDao.replaceAll(items)
+                        Log.d(TAG, "Saved ${items.size} healthy servers into internal database")
+                    }
+                    setServerListInitialFetchDone(true)
+                }
                 val cache = Cache()
                 val calendar = Calendar.getInstance()
-                //Cache in minute get from setting; -1 = Never (far future)
                 val minute = getCacheSaveTimeMinutes()
                 if (minute < 0) {
                     calendar.set(Calendar.YEAR, 9999)
@@ -100,6 +96,9 @@ class DataUtil(context: Context?) {
                 gson!!.toJson(cache, Cache::class.java, writer)
                 writer.close()
                 setConnectionCacheExpire(cache.expires)
+                val updateEditor = sharedPreferencesSetting!!.edit()
+                updateEditor.putLong(CONNECTION_CACHE_UPDATED_AT_KEY, System.currentTimeMillis())
+                updateEditor.apply()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -121,25 +120,6 @@ class DataUtil(context: Context?) {
         editor.apply()
     }
 
-    /** Timestamp of the last successful server-list refresh (any source). */
-    var connectionListLastUpdated: Date?
-        get() {
-            return try {
-                val jsonString = sharedPreferencesSetting!!.getString(
-                    "vpn_list_last_updated", null,
-                ) ?: return null
-                gson!!.fromJson(jsonString, Date::class.java)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
-            }
-        }
-        set(value) {
-            val editor = sharedPreferencesSetting!!.edit()
-            editor.putString("vpn_list_last_updated", gson!!.toJson(value))
-            editor.apply()
-        }
-
     val connectionCacheExpires: Date?
         /**
          * Get connection cache from shared preferences
@@ -156,6 +136,15 @@ class DataUtil(context: Context?) {
             }
             return null
         }
+
+    val connectionCacheUpdatedAt: Long
+        get() = sharedPreferencesSetting?.getLong(CONNECTION_CACHE_UPDATED_AT_KEY, 0L) ?: 0L
+
+    fun setConnectionCacheUpdatedAt(time: Long) {
+        val editor = sharedPreferencesSetting?.edit() ?: return
+        editor.putLong(CONNECTION_CACHE_UPDATED_AT_KEY, time)
+        editor.apply()
+    }
 
     fun setStringSetting(key: String?, value: String?) {
         val editor = sharedPreferencesSetting!!.edit()
@@ -310,8 +299,17 @@ class DataUtil(context: Context?) {
         return minutes.getOrElse(index) { minutes[DEFAULT_CACHE_TIME_INDEX] }
     }
 
+    fun isServerListInitialFetchDone(): Boolean {
+        return getBooleanSetting(KEY_SERVER_LIST_INITIAL_FETCH_DONE, false)
+    }
+
+    fun setServerListInitialFetchDone(done: Boolean = true) {
+        setBooleanSetting(KEY_SERVER_LIST_INITIAL_FETCH_DONE, done)
+    }
+
     companion object {
         const val TAG = "DataUtil"
+        const val KEY_SERVER_LIST_INITIAL_FETCH_DONE: String = "KEY_SERVER_LIST_INITIAL_FETCH_DONE"
         const val SETTING_CACHE_TIME_KEY: String = "SETTING_CACHE_TIME_KEY"
         const val SETTING_DEVELOPER_MODE: String = "SETTING_DEVELOPER_MODE"
 
@@ -339,6 +337,7 @@ class DataUtil(context: Context?) {
         const val AUTO_LAST_SUCCESS_PROTOCOL: String = "AUTO_LAST_SUCCESS_PROTOCOL"
         private const val USE_ALTERNATIVE_SERVER = "USE_ALTERNATIVE_SERVER"
         const val CONNECTION_CACHE_KEY = "CONNECTION_CACHE_KEY"
+        const val CONNECTION_CACHE_UPDATED_AT_KEY = "CONNECTION_CACHE_UPDATED_AT_KEY"
 
         /**
          * Check device connect to a network or not
