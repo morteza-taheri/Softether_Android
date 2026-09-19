@@ -3,7 +3,9 @@
 -keep class de.blinkt.openvpn.core.VpnStatus$LogListener
 -keep class de.blinkt.openvpn.core.LogItem
 -keepclassmembers class de.blinkt.openvpn.core.LogItem {public *;}
+-dontwarn de.blinkt.openvpn.core.LogItem
 -dontwarn de.blinkt.openvpn.core.VpnStatus$LogListener
+-dontwarn de.blinkt.openvpn.core.VpnStatus$StateListener
 
 # Add project specific ProGuard rules here.
 # You can control the set of applied configuration files using the
@@ -141,3 +143,27 @@
 -keep class kittoku.osc.** { *; }
 -keep interface kittoku.osc.** { *; }
 -keepclassmembers class kittoku.osc.** { *; }
+
+# Keep the Auto Mode log tap object and its listener interfaces from R8 full
+# mode. AutoModeModuleLogTap is an `object` singleton that implements
+# de.blinkt.openvpn.core.VpnStatus.LogListener/StateListener and
+# vn.unlimit.softether.SoftEtherVpnService.StateListener and is loaded during
+# AutoModeViewModel construction (Compose). R8 can rename/shrink the
+# implemented interfaces or the singleton's init path, producing a runtime
+# NoClassDefFoundError on the obfuscated name (e.g. class `mm`). Pin all of
+# these plus the AutoMode engine/viewmodel chain explicitly.
+-keep class vn.unlimit.vpngate.automode.AutoModeModuleLogTap { *; }
+-keep class vn.unlimit.vpngate.automode.AutoModeEngine { *; }
+-keep class vn.unlimit.vpngate.automode.AutoModeLogStore { *; }
+-keep class vn.unlimit.vpngate.automode.AutoModeController { *; }
+-keep class vn.unlimit.vpngate.viewmodels.AutoModeViewModel { *; }
+-keep class vn.unlimit.vpngate.automode.** { *; }
+-keep class vn.unlimit.vpngate.viewmodels.** { *; }
+-keep class vn.unlimit.vpngate.models.** { *; }
+# Listener interfaces the Auto Mode engine bridges across all VPN stacks.
+-keep interface de.blinkt.openvpn.core.VpnStatus$LogListener { *; }
+-keep interface de.blinkt.openvpn.core.VpnStatus$StateListener { *; }
+-keep interface vn.unlimit.softether.SoftEtherVpnService$StateListener { *; }
+-keepclasseswithmembernames class * {
+    @vn.unlimit.vpngate.automode.* <methods>;
+}
