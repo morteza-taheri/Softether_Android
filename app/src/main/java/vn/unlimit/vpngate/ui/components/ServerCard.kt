@@ -1,0 +1,337 @@
+package vn.unlimit.vpngate.ui.components
+
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.NetworkCheck
+import androidx.compose.material.icons.rounded.PowerSettingsNew
+import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import vn.unlimit.vpngate.R
+import vn.unlimit.vpngate.models.VPNGateConnection
+import vn.unlimit.vpngate.utils.DataUtil
+
+/**
+ * Redesigned server card: leading flag, country + hostname, metric chips
+ * (speed / ping / sessions / score) and protocol badges. Mirrors the info
+ * shown by the old item_vpn.xml list row.
+ */
+@Composable
+fun ServerCard(
+    connection: VPNGateConnection,
+    dataUtil: DataUtil?,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val isIncludeUdp = dataUtil?.getBooleanSetting(DataUtil.INCLUDE_UDP_SERVER, true) ?: true
+    val baseUrl = dataUtil?.baseUrl ?: "https://www.vpngate.net"
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+            ),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp,
+        shadowElevation = 1.dp,
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                FlagImage(
+                    url = "$baseUrl/images/flags/${connection.countryShort?.uppercase() ?: ""}.png",
+                    countryCode = connection.countryShort,
+                    modifier = Modifier.size(36.dp),
+                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 12.dp),
+                ) {
+                    Text(
+                        connection.countryLong ?: "",
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                    )
+                    Text(
+                        connection.calculateHostName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        connection.ip ?: "",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        stringResource(R.string.score_short) + ": " + connection.scoreAsString,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.padding(top = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                MetricChip(
+                    icon = Icons.Rounded.Speed,
+                    text = connection.calculateSpeed + " " + stringResource(R.string.speed_unit),
+                )
+                MetricChip(
+                    icon = Icons.Rounded.NetworkCheck,
+                    text = connection.pingAsString + " " + stringResource(R.string.ping_unit),
+                )
+                MetricChip(
+                    icon = Icons.Rounded.Storage,
+                    text = connection.numVpnSessionAsString,
+                )
+                MetricChip(
+                    icon = Icons.Rounded.Bolt,
+                    text = connection.getUpTimeShort(),
+                )
+            }
+            val badges = buildList {
+                if (isIncludeUdp && connection.tcpPort > 0) {
+                    add("TCP:${connection.tcpPort}")
+                } else if (isIncludeUdp && !connection.openVpnConfigData.isNullOrEmpty()) {
+                    add("OpenVPN")
+                }
+                if (isIncludeUdp && connection.udpPort > 0) {
+                    add("UDP:${connection.udpPort}")
+                }
+                if (connection.seTcpPort > 0) {
+                    add("SoftEther:${connection.seTcpPort}")
+                } else if (connection.seUdpPort > 0 || connection.seUdpSupported) {
+                    add("SoftEther")
+                }
+                if (connection.isSSTPSupport()) {
+                    val port = connection.sstpConnectPort
+                    if (port > 0) add("SSTP:$port") else add("SSTP")
+                }
+                if (connection.isL2TPSupport()) {
+                    add("L2TP")
+                }
+            }
+            if (badges.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    badges.forEach { ProtocolBadge(it) }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Converts a 2-letter ISO country code (e.g. "JP", "US", "DE") into Unicode country flag emoji.
+ */
+fun countryCodeToEmoji(countryCode: String?): String {
+    if (countryCode.isNullOrBlank() || countryCode.length != 2) return "🌐"
+    val firstChar = countryCode[0].uppercaseChar()
+    val secondChar = countryCode[1].uppercaseChar()
+    if (firstChar !in 'A'..'Z' || secondChar !in 'A'..'Z') return "🌐"
+    val firstCodePoint = 0x1F1E6 + (firstChar - 'A')
+    val secondCodePoint = 0x1F1E6 + (secondChar - 'A')
+    return String(Character.toChars(firstCodePoint)) + String(Character.toChars(secondCodePoint))
+}
+
+/** Flag loaded with Coil, with instantaneous native emoji fallback. */
+@Composable
+fun FlagImage(
+    url: String? = null,
+    countryCode: String? = null,
+    modifier: Modifier = Modifier,
+    corner: Dp = 8.dp,
+) {
+    val derivedCode = countryCode ?: url?.substringAfterLast('/')?.substringBefore('.')?.takeIf { it.length == 2 }
+    val emoji = remember(derivedCode) { countryCodeToEmoji(derivedCode) }
+    var imageFailed by remember(url) { mutableStateOf(false) }
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(corner))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (!url.isNullOrBlank() && !imageFailed) {
+            coil3.compose.AsyncImage(
+                model = url,
+                contentDescription = derivedCode,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+                onError = { imageFailed = true },
+            )
+        }
+        if (url.isNullOrBlank() || imageFailed) {
+            Text(
+                text = emoji,
+                fontSize = 20.sp,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+/**
+ * Big animated circular connect button used by the Status screen. Pulses
+ * while connecting, shows a solid ring when connected.
+ */
+@Composable
+fun PowerButton(
+    activated: Boolean,
+    enabled: Boolean,
+    connecting: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    size: Dp = 96.dp,
+    activeColor: Color = MaterialTheme.colorScheme.primary,
+    idleColor: Color = MaterialTheme.colorScheme.outline,
+) {
+    val transition = rememberInfiniteTransition(label = "pulse")
+    val pulse by transition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(650, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "pulseScale",
+    )
+    val scale = if (connecting) pulse else 1f
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier
+            .size(size)
+            .scale(scale),
+        shape = androidx.compose.foundation.shape.CircleShape,
+        color = if (activated) activeColor else MaterialTheme.colorScheme.surfaceVariant,
+        shadowElevation = if (activated || connecting) 6.dp else 2.dp,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            if (connecting) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(size / 2),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    strokeWidth = 4.dp,
+                )
+            } else {
+                Icon(
+                    Icons.Rounded.PowerSettingsNew,
+                    contentDescription = null,
+                    modifier = Modifier.size(size / 2),
+                    tint = if (activated) MaterialTheme.colorScheme.onPrimary else idleColor,
+                )
+            }
+        }
+    }
+}
+
+/** Gradient hero surface used at the top of connection screens. */
+@Composable
+fun HeroGradient(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    androidx.compose.foundation.layout.Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.0f),
+                    ),
+                ),
+            ),
+    ) { content() }
+}
+
+/** Small toggle used by the debug sheet for dump/raw views. */
+@Composable
+fun FilterBadgeButton(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        color = if (selected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        },
+        modifier = modifier,
+    ) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.labelLarge,
+            color = if (selected) {
+                MaterialTheme.colorScheme.onPrimary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
+    }
+}
+
+private fun VPNGateConnection.getUpTimeShort(): String {
+    val seconds = uptime / 1000
+    return when {
+        seconds < 60 -> uptime.toString()
+        seconds < 3600 -> (seconds / 60).toString() + "m"
+        seconds < 86400 -> (seconds / 3600).toString() + "h"
+        else -> (seconds / 86400).toString() + "d"
+    }
+}
