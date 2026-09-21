@@ -14,8 +14,8 @@ android {
         applicationId "vn.unlimit.vpngatepro"
         minSdkVersion project.ext.minSdkVersion
         targetSdkVersion project.ext.targetSdkVersion
-        versionCode 139
-        versionName "2.5.4"
+        versionCode 140
+        versionName "2.5.5"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "FLAVOR", "\"pro\""
         ksp {
