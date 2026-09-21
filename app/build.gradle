@@ -14,8 +14,8 @@ android {
         applicationId "vn.unlimit.vpngatepro"
         minSdkVersion project.ext.minSdkVersion
         targetSdkVersion project.ext.targetSdkVersion
-        versionCode 133
-        versionName "2.4.0"
+        versionCode 139
+        versionName "2.5.4"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "FLAVOR", "\"pro\""
         ksp {
@@ -39,6 +39,7 @@ android {
 
     buildTypes {
         release {
+            signingConfig signingConfigs.debugConfig
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
